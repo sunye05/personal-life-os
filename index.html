@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#0f2940">
+  <meta name="description" content="上海子轩建筑科技集团有限公司 - 公司宣传与材料资源展示">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" type="image/svg+xml" href="/img/favicon.svg">
+  <link rel="apple-touch-icon" href="/img/favicon.svg">
+  <title>上海子轩建筑科技集团有限公司</title>
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+  <!-- 顶部导航 -->
+  <header class="topbar" id="topbar">
+    <button class="menu-btn" id="menuBtn" aria-label="打开菜单">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="brand" id="brand">
+      <span class="brand-zh">上海子轩</span>
+      <span class="brand-en">ZIXUAN</span>
+    </div>
+    <div class="topbar-actions">
+      <a href="/admin/" class="admin-link" id="adminLink" title="管理后台">🔐 管理</a>
+    </div>
+  </header>
+
+  <!-- 侧边导航 -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <h2>导航</h2>
+      <button class="close-btn" id="closeSidebar" aria-label="关闭">×</button>
+    </div>
+    <nav class="sidebar-nav" id="sidebarNav"><!-- JS 注入 --></nav>
+    <div class="sidebar-footer">
+      <a href="/admin/" class="sidebar-admin-link">🔐 进入管理后台</a>
+    </div>
+  </aside>
+  <div class="backdrop" id="backdrop"></div>
+
+  <!-- 主内容区 -->
+  <main class="main" id="main">
+    <div class="loading" id="loading">
+      <div class="spinner"></div>
+      <p>正在加载公司信息...</p>
+    </div>
+  </main>
+
+  <!-- 图片查看器 -->
+  <div class="lightbox" id="lightbox" hidden>
+    <button class="lightbox-close" id="lightboxClose" aria-label="关闭">×</button>
+    <button class="lightbox-prev" id="lightboxPrev" aria-label="上一张">‹</button>
+    <img id="lightboxImg" alt="">
+    <button class="lightbox-next" id="lightboxNext" aria-label="下一张">›</button>
+  </div>
+
+  <!-- 安装PWA提示 -->
+  <div class="install-tip" id="installTip" hidden>
+    <span>📱 可将本应用安装到主屏幕，离线访问</span>
+    <button id="installBtn">安装</button>
+    <button id="installClose">×</button>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>

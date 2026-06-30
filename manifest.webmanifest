@@ -1,0 +1,20 @@
+{
+  "name": "上海子轩建筑科技集团",
+  "short_name": "子轩建设",
+  "description": "公司宣传与材料资源展示",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f2940",
+  "theme_color": "#0f2940",
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "/img/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

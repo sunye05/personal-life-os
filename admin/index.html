@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0f2940">
+  <title>管理后台 - 上海子轩</title>
+  <link rel="icon" type="image/svg+xml" href="/img/favicon.svg">
+  <link rel="stylesheet" href="/admin/css/admin.css">
+</head>
+<body>
+  <!-- 登录页 -->
+  <div class="login-page" id="loginPage">
+    <div class="login-card">
+      <div class="login-header">
+        <div class="login-logo">🔐</div>
+        <h1>管理后台</h1>
+        <p>上海子轩建筑科技集团有限公司</p>
+      </div>
+      <form id="loginForm" autocomplete="off">
+        <div class="form-group">
+          <label>账号</label>
+          <input type="text" name="username" required autocomplete="username" placeholder="请输入账号">
+        </div>
+        <div class="form-group">
+          <label>密码</label>
+          <input type="password" name="password" required autocomplete="current-password" placeholder="请输入密码">
+        </div>
+        <div class="form-error" id="loginError" hidden></div>
+        <button type="submit" class="btn-primary" id="loginBtn">登 录</button>
+      </form>
+      <div class="login-tip">
+        首次部署默认账号：<code>admin</code> / <code>admin123456</code><br>
+        登录后请立即修改默认密码
+      </div>
+      <a href="/" class="back-home">← 返回前台</a>
+    </div>
+  </div>
+
+  <!-- 管理主界面 -->
+  <div class="admin-page" id="adminPage" hidden>
+    <header class="admin-header">
+      <div class="admin-header-left">
+        <h1>📦 子轩管理后台</h1>
+      </div>
+      <div class="admin-header-right">
+        <span class="admin-user" id="adminUser">--</span>
+        <button class="btn-text" id="changePwdBtn">修改密码</button>
+        <button class="btn-text" id="logoutBtn">退出登录</button>
+      </div>
+    </header>
+
+    <div class="admin-tabs">
+      <button class="admin-tab active" data-tab="materials">📦 材料资源</button>
+      <button class="admin-tab" data-tab="users" id="usersTab">👥 账号管理</button>
+    </div>
+
+    <main class="admin-main">
+      <!-- 材料管理 -->
+      <section class="tab-pane active" id="pane-materials">
+        <div class="action-bar">
+          <button class="btn-primary" id="addMatBtn">+ 新增材料</button>
+          <span class="hint" id="matHint"></span>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table" id="matTable">
+            <thead>
+              <tr>
+                <th style="width: 60px;">ID</th>
+                <th>品类</th>
+                <th>品牌</th>
+                <th>联系方式</th>
+                <th>备注</th>
+                <th style="width: 60px;">排序</th>
+                <th style="width: 70px;">状态</th>
+                <th style="width: 140px;">操作</th>
+              </tr>
+            </thead>
+            <tbody id="matTbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 账号管理 -->
+      <section class="tab-pane" id="pane-users">
+        <div class="action-bar">
+          <button class="btn-primary" id="addUserBtn">+ 新增账号</button>
+          <span class="hint">仅超级管理员可管理账号</span>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table" id="userTable">
+            <thead>
+              <tr>
+                <th style="width: 60px;">ID</th>
+                <th>账号</th>
+                <th>姓名</th>
+                <th style="width: 110px;">角色</th>
+                <th style="width: 90px;">状态</th>
+                <th>创建时间</th>
+                <th style="width: 200px;">操作</th>
+              </tr>
+            </thead>
+            <tbody id="userTbody"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- 弹窗：编辑材料 -->
+  <div class="modal" id="matModal" hidden>
+    <div class="modal-mask"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="matModalTitle">新增材料</h2>
+        <button class="modal-close" data-close="matModal">×</button>
+      </div>
+      <form id="matForm" class="modal-body">
+        <input type="hidden" name="id">
+        <div class="form-group">
+          <label>品类 <span class="required">*</span></label>
+          <input type="text" name="category" required placeholder="如：水管、电线、瓷砖..." list="categoryList">
+          <datalist id="categoryList"></datalist>
+        </div>
+        <div class="form-group">
+          <label>品牌 <span class="required">*</span></label>
+          <input type="text" name="brand" required placeholder="如：伟星、远东、诺贝尔...">
+        </div>
+        <div class="form-group">
+          <label>联系方式 <span class="required">*</span></label>
+          <input type="text" name="contact" required placeholder="电话/微信/邮箱/网址...">
+        </div>
+        <div class="form-group">
+          <label>备注</label>
+          <textarea name="note" rows="2" placeholder="型号、价格区间、说明等可选"></textarea>
+        </div>
+        <div class="form-group form-row">
+          <div>
+            <label>排序</label>
+            <input type="number" name="sort_order" value="0">
+          </div>
+          <div>
+            <label>状态</label>
+            <select name="is_active">
+              <option value="1">启用</option>
+              <option value="0">停用</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" data-close="matModal">取消</button>
+          <button type="submit" class="btn-primary">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 弹窗：编辑账号 -->
+  <div class="modal" id="userModal" hidden>
+    <div class="modal-mask"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="userModalTitle">新增账号</h2>
+        <button class="modal-close" data-close="userModal">×</button>
+      </div>
+      <form id="userForm" class="modal-body">
+        <input type="hidden" name="id">
+        <div class="form-group">
+          <label>账号 <span class="required">*</span></label>
+          <input type="text" name="username" required placeholder="登录账号（英数）">
+        </div>
+        <div class="form-group">
+          <label>显示名称</label>
+          <input type="text" name="display_name" placeholder="管理员的姓名（可选）">
+        </div>
+        <div class="form-group">
+          <label>密码 <span class="required" id="pwdRequired">*</span></label>
+          <input type="text" name="password" placeholder="至少 6 位" minlength="6">
+          <small class="hint" id="pwdHint">新增时必填；编辑时留空表示不修改</small>
+        </div>
+        <div class="form-group">
+          <label>角色 <span class="required">*</span></label>
+          <select name="role" required>
+            <option value="admin">管理员（可管理材料）</option>
+            <option value="superadmin">超级管理员（可管理账号 + 材料）</option>
+          </select>
+        </div>
+        <div class="form-group" id="activeGroup" hidden>
+          <label>状态</label>
+          <select name="is_active">
+            <option value="1">启用</option>
+            <option value="0">停用</option>
+          </select>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" data-close="userModal">取消</button>
+          <button type="submit" class="btn-primary">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 弹窗：修改自己密码 -->
+  <div class="modal" id="pwdModal" hidden>
+    <div class="modal-mask"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>修改密码</h2>
+        <button class="modal-close" data-close="pwdModal">×</button>
+      </div>
+      <form id="pwdForm" class="modal-body">
+        <div class="form-group">
+          <label>当前密码 <span class="required">*</span></label>
+          <input type="password" name="old_password" required minlength="1">
+        </div>
+        <div class="form-group">
+          <label>新密码 <span class="required">*</span></label>
+          <input type="password" name="new_password" required minlength="6">
+        </div>
+        <div class="form-group">
+          <label>确认新密码 <span class="required">*</span></label>
+          <input type="password" name="confirm" required minlength="6">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" data-close="pwdModal">取消</button>
+          <button type="submit" class="btn-primary">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 通用提示 -->
+  <div class="toast" id="toast" hidden></div>
+
+  <script src="/js/api.js"></script>
+  <script src="/admin/js/admin.js"></script>
+</body>
+</html>
