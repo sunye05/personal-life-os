@@ -34,39 +34,55 @@ const Admin = (() => {
   }
 
   function showLogin() {
-    $('#loginPage').hidden = false;
-    $('#adminPage').hidden = true;
-    $('#username').focus();
+    const loginPage = $('#loginPage');
+    const adminPage = $('#adminPage');
+    if (loginPage) loginPage.hidden = false;
+    if (adminPage) adminPage.hidden = true;
+    const usernameInput = $('#username') || document.querySelector('input[name="username"]');
+    if (usernameInput) usernameInput.focus();
   }
 
   function showAdmin() {
-    $('#loginPage').hidden = true;
-    $('#adminPage').hidden = false;
-    $('#adminUser').textContent = `${me.display_name || me.username} (${me.role === 'superadmin' ? '超级管理员' : '管理员'})`;
+    const loginPage = $('#loginPage');
+    const adminPage = $('#adminPage');
+    if (loginPage) loginPage.hidden = true;
+    if (adminPage) adminPage.hidden = false;
+    const adminUser = $('#adminUser');
+    if (adminUser) adminUser.textContent = `${me.display_name || me.username} (${me.role === 'superadmin' ? '超级管理员' : '管理员'})`;
     if (me.role !== 'superadmin') {
-      $('#usersTab').style.display = 'none';
+      const usersTab = $('#usersTab');
+      if (usersTab) usersTab.style.display = 'none';
     }
     loadMaterials();
   }
 
-  $('#loginForm').addEventListener('submit', async e => {
-    e.preventDefault();
-    const fd = new FormData(e.target);
-    const btn = $('#loginBtn');
-    btn.disabled = true; btn.textContent = '登录中...';
-    $('#loginError').hidden = true;
-    try {
-      const { user } = await API.login(fd.get('username').trim(), fd.get('password'));
-      me = user;
-      showAdmin();
-      toast('登录成功', 'success');
-    } catch (err) {
-      $('#loginError').textContent = err.message;
-      $('#loginError').hidden = false;
-    } finally {
-      btn.disabled = false; btn.textContent = '登 录';
-    }
-  });
+  function safeSetHidden(selector, hidden) {
+    const el = $(selector);
+    if (el) el.hidden = hidden;
+  }
+
+  const loginForm = $('#loginForm');
+  if (loginForm) {
+    loginForm.addEventListener('submit', async e => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const btn = $('#loginBtn');
+      if (btn) { btn.disabled = true; btn.textContent = '登录中...'; }
+      safeSetHidden('#loginError', true);
+      try {
+        const { user } = await API.login(fd.get('username').trim(), fd.get('password'));
+        me = user;
+        showAdmin();
+        toast('登录成功', 'success');
+      } catch (err) {
+        const errEl = $('#loginError');
+        if (errEl) { errEl.textContent = err.message; errEl.hidden = false; }
+        else alert('登录失败: ' + err.message);
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = '登 录'; }
+      }
+    });
+  }
 
   $('#logoutBtn').addEventListener('click', async () => {
     try { await API.logout(); } catch {}
