@@ -180,6 +180,7 @@ label { display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-s
   display: flex; align-items: center; justify-content: center;
   padding: 20px;
 }
+.modal[hidden] { display: none !important; }
 .modal-mask {
   position: absolute; inset: 0; background: rgba(0, 0, 0, 0.5);
   animation: fadeIn 0.2s;

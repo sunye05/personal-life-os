@@ -86,13 +86,47 @@ const Admin = (() => {
   });
 
   // ============ 弹窗 ============
-  function openModal(id) { $('#' + id).hidden = false; }
-  function closeModal(id) { $('#' + id).hidden = true; }
-  $$('[data-close]').forEach(el => el.addEventListener('click', () => closeModal(el.dataset.close)));
-  $$('.modal-mask').forEach(el => el.addEventListener('click', e => {
-    const modal = e.target.closest('.modal');
-    if (modal) modal.hidden = true;
-  }));
+  function openModal(id) {
+    const el = $('#' + id);
+    if (el) el.hidden = false;
+  }
+  function closeModal(id) {
+    const el = $('#' + id);
+    if (el) el.hidden = true;
+  }
+  function closeAllModals() {
+    $$('.modal').forEach(m => { m.hidden = true; });
+  }
+  // 关闭按钮
+  document.addEventListener('click', e => {
+    const closeBtn = e.target.closest('[data-close]');
+    if (closeBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      closeModal(closeBtn.dataset.close);
+      return;
+    }
+    // 点遮罩关闭
+    if (e.target.classList && e.target.classList.contains('modal-mask')) {
+      e.preventDefault();
+      e.stopPropagation();
+      const modal = e.target.closest('.modal');
+      if (modal) modal.hidden = true;
+      return;
+    }
+    // 点 × 按钮关闭（兼容 data-close 缺失的情况）
+    if (e.target.classList && (e.target.classList.contains('modal-close') || e.target.classList.contains('close-btn'))) {
+      e.preventDefault();
+      e.stopPropagation();
+      const modal = e.target.closest('.modal');
+      if (modal) modal.hidden = true;
+      return;
+    }
+  });
+  // ESC 键关闭所有弹窗
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeAllModals();
+  });
 
   // ============ 材料管理 ============
   async function loadMaterials() {

@@ -234,5 +234,13 @@
 
   <script src="/js/api.js"></script>
   <script src="/admin/js/admin.js"></script>
+  <!-- 应急：双击背景强制关闭所有弹窗 -->
+  <script>
+    document.addEventListener('dblclick', e => {
+      if (e.target.classList && e.target.classList.contains('modal-mask')) {
+        document.querySelectorAll('.modal').forEach(m => m.hidden = true);
+      }
+    });
+  </script>
 </body>
 </html>
