@@ -15,6 +15,7 @@ const Admin = (() => {
 
   function toast(msg, type = '') {
     const el = $('#toast');
+    if (!el) return;
     el.className = 'toast' + (type ? ' ' + type : '');
     el.textContent = msg;
     el.hidden = false;

@@ -447,37 +447,51 @@ const App = (() => {
   window.addEventListener('beforeinstallprompt', e => {
     e.preventDefault();
     deferredPrompt = e;
-    if (!localStorage.getItem('pwa_install_dismissed')) {
-      document.getElementById('installTip').hidden = false;
+    const tip = document.getElementById('installTip');
+    if (tip && !localStorage.getItem('pwa_install_dismissed')) {
+      tip.hidden = false;
     }
   });
-  document.getElementById('installBtn').addEventListener('click', async () => {
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      await deferredPrompt.userChoice;
-      deferredPrompt = null;
-    }
-    document.getElementById('installTip').hidden = true;
-  });
-  document.getElementById('installClose').addEventListener('click', () => {
-    document.getElementById('installTip').hidden = true;
-    localStorage.setItem('pwa_install_dismissed', '1');
-  });
+  const installBtn = document.getElementById('installBtn');
+  if (installBtn) {
+    installBtn.addEventListener('click', async () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        await deferredPrompt.userChoice;
+        deferredPrompt = null;
+      }
+      const tip = document.getElementById('installTip');
+      if (tip) tip.hidden = true;
+    });
+  }
+  const installClose = document.getElementById('installClose');
+  if (installClose) {
+    installClose.addEventListener('click', () => {
+      const tip = document.getElementById('installTip');
+      if (tip) tip.hidden = true;
+      localStorage.setItem('pwa_install_dismissed', '1');
+    });
+  }
 
   // ============ 初始化 ============
   async function init() {
-    // 绑定基础事件
-    document.getElementById('menuBtn').addEventListener('click', openSidebar);
-    document.getElementById('closeSidebar').addEventListener('click', closeSidebar);
-    document.getElementById('backdrop').addEventListener('click', closeSidebar);
-    document.getElementById('lightboxClose').addEventListener('click', closeLightbox);
-    document.getElementById('lightboxNext').addEventListener('click', nextLightbox);
-    document.getElementById('lightboxPrev').addEventListener('click', prevLightbox);
-    document.getElementById('lightbox').addEventListener('click', e => {
+    // 绑定基础事件（带 null 防护）
+    function bindIf(id, event, handler) {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener(event, handler);
+    }
+    bindIf('menuBtn', 'click', openSidebar);
+    bindIf('closeSidebar', 'click', closeSidebar);
+    bindIf('backdrop', 'click', closeSidebar);
+    bindIf('lightboxClose', 'click', closeLightbox);
+    bindIf('lightboxNext', 'click', nextLightbox);
+    bindIf('lightboxPrev', 'click', prevLightbox);
+    bindIf('lightbox', 'click', e => {
       if (e.target.id === 'lightbox') closeLightbox();
     });
     document.addEventListener('keydown', e => {
-      if (document.getElementById('lightbox').hidden) return;
+      const lb = document.getElementById('lightbox');
+      if (!lb || lb.hidden) return;
       if (e.key === 'Escape') closeLightbox();
       if (e.key === 'ArrowRight') nextLightbox();
       if (e.key === 'ArrowLeft') prevLightbox();
@@ -486,7 +500,8 @@ const App = (() => {
     try {
       state.content = await API.getContent();
     } catch (e) {
-      document.getElementById('main').innerHTML = `<div class="content-wrap"><div class="card" style="text-align: center; padding: 40px;"><p style="color: var(--danger);">❌ 加载失败：${e.message}</p></div></div>`;
+      const main = document.getElementById('main');
+      if (main) main.innerHTML = `<div class="content-wrap"><div class="card" style="text-align: center; padding: 40px;"><p style="color: var(--danger);">❌ 加载失败：${e.message}</p></div></div>`;
       return;
     }
     renderSidebar();
