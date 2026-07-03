@@ -29,7 +29,8 @@ const Admin = (() => {
       const { user } = await API.me();
       me = user;
       showAdmin();
-    } catch {
+    } catch (err) {
+      console.warn('认证失败:', err.message);
       showLogin();
     }
   }
