@@ -1,5 +1,5 @@
 // Service Worker - 离线缓存
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v2';
 const CORE_CACHE = `zixuan-core-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `zixuan-runtime-${CACHE_VERSION}`;
 
@@ -24,7 +24,7 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys => Promise.all(
-      keys.filter(k => k !== CORE_CACHE && k !== RUNTIME_CACHE).map(k => caches.delete(k))
+      keys.filter(k => !k.endsWith(CACHE_VERSION)).map(k => caches.delete(k))
     )).then(() => self.clients.claim())
   );
 });
@@ -36,10 +36,12 @@ self.addEventListener('fetch', event => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
 
-  // 跳过：API 请求（保证在线获取最新数据）
+  // 关键：永远不拦截 /api/ 请求（保证后端认证正常工作）
   if (url.pathname.startsWith('/api/')) return;
-  // 跳过：管理后台（保持在线）
+  // 关键：永远不拦截 admin 页面（避免 sw 缓存登录页导致的问题）
   if (url.pathname.startsWith('/admin/')) return;
+  // 关键：永远不拦截 service worker 自身
+  if (url.pathname === '/sw.js') return;
 
   // 图片走 cache-first
   if (req.destination === 'image' || url.pathname.startsWith('/assets/')) {
@@ -57,7 +59,7 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // HTML/JS/CSS：network-first，回退到缓存
+  // HTML/JS/CSS：network-first，回退到缓存（仅首页/前台）
   event.respondWith(
     fetch(req).then(res => {
       if (res.ok && (req.destination === 'document' || req.destination === 'script' || req.destination === 'style')) {
