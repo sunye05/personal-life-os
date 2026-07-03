@@ -26,11 +26,23 @@ const Admin = (() => {
   // ============ 登录 ============
   async function checkAuth() {
     try {
+      console.log('开始认证检查...');
       const { user } = await API.me();
+      console.log('认证成功:', user);
       me = user;
       showAdmin();
     } catch (err) {
       console.warn('认证失败:', err.message);
+      // 即使 /me 失败也尝试调用一次 me，强制 set-cookie
+      try {
+        const r = await fetch('/api/auth/me', { credentials: 'include' });
+        if (r.ok) {
+          const d = await r.json();
+          me = d.user;
+          showAdmin();
+          return;
+        }
+      } catch {}
       showLogin();
     }
   }
