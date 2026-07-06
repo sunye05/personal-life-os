@@ -434,13 +434,26 @@ const App = (() => {
 
   // ============ 侧边栏 ============
   function openSidebar() {
-    document.getElementById('sidebar').classList.add('open');
-    document.getElementById('backdrop').classList.add('show');
+    const sidebar = document.getElementById('sidebar');
+    const backdrop = document.getElementById('backdrop');
+    if (sidebar) { sidebar.classList.add('open'); sidebar.style.transform = 'translateX(0)'; }
+    if (backdrop) backdrop.classList.add('show');
   }
   function closeSidebar() {
-    document.getElementById('sidebar').classList.remove('open');
-    document.getElementById('backdrop').classList.remove('show');
+    const sidebar = document.getElementById('sidebar');
+    const backdrop = document.getElementById('backdrop');
+    if (sidebar) { sidebar.classList.remove('open'); sidebar.style.transform = ''; }
+    if (backdrop) backdrop.classList.remove('show');
   }
+  // 全局事件委托：确保即使 JS 早期绑定失败也能响应
+  document.addEventListener('click', e => {
+    const closeBtn = e.target.closest('#closeSidebar');
+    if (closeBtn) { closeSidebar(); e.stopPropagation(); return; }
+    const menuBtn = e.target.closest('#menuBtn');
+    if (menuBtn) { openSidebar(); e.stopPropagation(); return; }
+    const backdrop = e.target.closest('#backdrop');
+    if (backdrop) { closeSidebar(); e.stopPropagation(); return; }
+  });
 
   // ============ PWA 安装提示 ============
   let deferredPrompt = null;

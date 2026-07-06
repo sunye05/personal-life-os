@@ -14,7 +14,7 @@
 <body>
   <!-- 顶部导航 -->
   <header class="topbar" id="topbar">
-    <button class="menu-btn" id="menuBtn" aria-label="打开菜单">
+    <button class="menu-btn" id="menuBtn" onclick="document.getElementById('sidebar').classList.add('open'); document.getElementById('backdrop').classList.add('show');" aria-label="打开菜单">
       <span></span><span></span><span></span>
     </button>
     <div class="brand" id="brand">
@@ -30,7 +30,7 @@
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
       <h2>导航</h2>
-      <button class="close-btn" id="closeSidebar" aria-label="关闭">×</button>
+      <button class="close-btn" id="closeSidebar" onclick="document.getElementById('sidebar').classList.remove('open'); document.getElementById('backdrop').classList.remove('show');" aria-label="关闭">×</button>
     </div>
     <nav class="sidebar-nav" id="sidebarNav"><!-- JS 注入 --></nav>
     <div class="sidebar-footer">
