@@ -50,8 +50,10 @@ const Admin = (() => {
   function showLogin() {
     const loginPage = $('#loginPage');
     const adminPage = $('#adminPage');
-    if (loginPage) loginPage.hidden = false;
-    if (adminPage) adminPage.hidden = true;
+    if (loginPage) { loginPage.hidden = true; loginPage.style.display = 'none'; }
+    if (adminPage) { adminPage.hidden = true; adminPage.style.display = 'none'; }
+    // 重定向到登录页（这里直接显示 loginPage）
+    if (loginPage) { loginPage.hidden = false; loginPage.style.display = 'flex'; }
     const usernameInput = $('#username') || document.querySelector('input[name="username"]');
     if (usernameInput) usernameInput.focus();
   }
@@ -59,8 +61,11 @@ const Admin = (() => {
   function showAdmin() {
     const loginPage = $('#loginPage');
     const adminPage = $('#adminPage');
-    if (loginPage) loginPage.hidden = true;
-    if (adminPage) adminPage.hidden = false;
+    // 关键：双重保险隐藏登录页
+    if (loginPage) { loginPage.hidden = true; loginPage.style.display = 'none'; }
+    if (adminPage) { adminPage.hidden = false; adminPage.style.display = 'flex'; }
+    // 滚动到顶部
+    window.scrollTo(0, 0);
     const adminUser = $('#adminUser');
     if (adminUser) adminUser.textContent = `${me.display_name || me.username} (${me.role === 'superadmin' ? '超级管理员' : '管理员'})`;
     if (me.role !== 'superadmin') {

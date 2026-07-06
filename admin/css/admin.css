@@ -37,6 +37,9 @@ textarea { resize: vertical; min-height: 60px; }
 label { display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-soft); font-weight: 500; }
 .required { color: var(--danger); }
 
+/* 强制隐藏：解决 login-page / admin-page 有 display:flex 时 [hidden] 不生效的问题 */
+[hidden] { display: none !important; }
+
 /* ============== 登录页 ============== */
 .login-page {
   min-height: 100vh;
