@@ -532,4 +532,73 @@ const App = (() => {
   return { init };
 })();
 
+// ==================== 全局兜底事件绑定 ====================
+// 无论 IIFE 内部是否出错，这里都保证按钮可点击
+(function bindGlobalEvents() {
+  function openSidebar() {
+    const s = document.getElementById('sidebar');
+    const b = document.getElementById('backdrop');
+    if (s) { s.classList.add('open'); s.style.transform = 'translateX(0)'; }
+    if (b) b.classList.add('show');
+  }
+  function closeSidebar() {
+    const s = document.getElementById('sidebar');
+    const b = document.getElementById('backdrop');
+    if (s) { s.classList.remove('open'); s.style.transform = ''; }
+    if (b) b.classList.remove('show');
+  }
+  // 用 onwindow 暴露给 inline onclick
+  window.__zx = { openSidebar, closeSidebar };
+
+  document.addEventListener('click', e => {
+    const t = e.target;
+    if (!t) return;
+    // 菜单按钮
+    if (t.closest && t.closest('#menuBtn')) { openSidebar(); e.preventDefault(); return; }
+    // 关闭按钮
+    if (t.closest && t.closest('#closeSidebar')) { closeSidebar(); e.preventDefault(); return; }
+    // 背景遮罩
+    if (t.id === 'backdrop') { closeSidebar(); return; }
+    // 侧边导航项
+    const navItem = t.closest && t.closest('.sidebar-nav-item');
+    if (navItem) {
+      e.preventDefault();
+      const section = navItem.dataset.section;
+      if (section) location.hash = section;
+      closeSidebar();
+      return;
+    }
+    // 安装提示关闭
+    if (t.id === 'installClose') {
+      const tip = document.getElementById('installTip');
+      if (tip) tip.hidden = true;
+      try { localStorage.setItem('pwa_install_dismissed', '1'); } catch {}
+      return;
+    }
+    // 安装按钮
+    if (t.id === 'installBtn') {
+      // 由 beforeinstallprompt 处理
+      return;
+    }
+  }, true);
+
+  // 案例子分类 tab 点击
+  document.addEventListener('click', e => {
+    const tab = e.target.closest && e.target.closest('.case-tab');
+    if (tab) {
+      e.preventDefault();
+      const sub = tab.dataset.sub;
+      if (sub && window.App && window.App.setCaseSub) {
+        window.App.setCaseSub(sub);
+      } else {
+        // 降级：手动切换 active class
+        document.querySelectorAll('.case-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+      }
+    }
+  });
+
+  console.log('✅ 全局事件绑定完成');
+})();
+
 document.addEventListener('DOMContentLoaded', App.init);
