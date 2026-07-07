@@ -65,9 +65,62 @@
   <script src="/js/api.js"></script>
   <script src="/js/app.js"></script>
   <script>
+    // ==================== 终极兜底 ====================
+    // 不管 app.js 是否执行成功，这里都能用
+    (function emergencyInit() {
+      // 1. 打开/关闭侧边菜单
+      window.toggleSidebar = function(show) {
+        const s = document.getElementById('sidebar');
+        const b = document.getElementById('backdrop');
+        if (s) {
+          s.classList.toggle('open', show);
+          s.style.transform = show ? 'translateX(0)' : '';
+        }
+        if (b) b.classList.toggle('show', show);
+      };
+      // 2. 切换板块
+      window.goToSection = function(sectionId) {
+        if (window.App && window.App.navigateTo) {
+          window.App.navigateTo(sectionId);
+        } else {
+          location.hash = sectionId;
+        }
+        window.toggleSidebar(false);
+      };
+      // 3. 关闭安装提示
+      window.dismissInstall = function() {
+        const t = document.getElementById('installTip');
+        if (t) t.hidden = true;
+        try { localStorage.setItem('pwa_install_dismissed', '1'); } catch {}
+      };
+      // 4. 全局 click 委托（终极兜底）
+      document.addEventListener('click', function(e) {
+        const t = e.target;
+        if (!t) return;
+        if (t.id === 'menuBtn' || t.closest && t.closest('#menuBtn')) {
+          e.preventDefault();
+          window.toggleSidebar(true);
+        } else if (t.id === 'closeSidebar' || t.closest && t.closest('#closeSidebar')) {
+          e.preventDefault();
+          window.toggleSidebar(false);
+        } else if (t.id === 'backdrop') {
+          window.toggleSidebar(false);
+        } else if (t.id === 'installClose') {
+          window.dismissInstall();
+        } else {
+          const nav = t.closest && t.closest('.sidebar-nav-item');
+          if (nav) {
+            e.preventDefault();
+            const id = nav.dataset.section;
+            if (id) window.goToSection(id);
+          }
+        }
+      });
+      console.log('✅ 紧急初始化完成');
+    })();
+
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        // PWA 离线缓存注册（不阻塞主流程）
         navigator.serviceWorker.register('/sw.js').catch(err => console.warn('SW 注册失败:', err.message));
       });
     }
