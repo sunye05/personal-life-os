@@ -1,604 +1,75 @@
-// 前端应用主逻辑
-const App = (() => {
-  let state = {
-    content: null,
-    currentSection: 'home',
-    currentCaseSub: 'theatre',
-    materials: [],
-    categories: [],
-    materialFilter: { category: '', q: '' },
-  };
+﻿(()=>{'use strict';
+const KEY='life_os_v1';
+const nav=[['home','◫','今日总览','L0'],['record','✎','每日记录','L0'],['archive','▣','基础档案','L1'],['energy','◉','能量评估','L2'],['plan','◇','人生规划','L3'],['action','✓','行动方案','L4'],['remind','♢','智能提醒','L5']];
+const recordTypes={mood:['心情与情绪','☻'],finance:['财务账目','¥'],secret:['树洞私密','◌'],review:['经验复盘','↻'],body:['身体状态','♡'],time:['时间开销','◷'],todo:['待办成果','✓'],social:['人际环境','♧']};
+const dims={body:'身体',mind:'精神',finance:'财务',ability:'能力',resource:'资源',emotion:'情绪'};
+let installPrompt=null;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e});
+let page='home',type='mood',db=load();db.settings=db.settings||{theme:'forest',avatar:''};
+function seed(){return{records:[],tasks:[{id:id(),name:'完成今日轻量记录',cat:'成长',done:false},{id:id(),name:'散步或运动 20 分钟',cat:'健康',done:false},{id:id(),name:'整理明日最重要事项',cat:'工作',done:false}],reminders:[{id:id(),name:'每周复盘',time:'周日 20:30',kind:'周期',done:false}],profile:{traits:'',health:'',finance:'',skills:'',experience:'',position:''},goals:[{id:id(),icon:'职',name:'职业主线',detail:'建立可持续、有积累的职业路径',progress:15},{id:id(),icon:'财',name:'财务主线',detail:'完善储备与稳健增长机制',progress:10},{id:id(),icon:'健',name:'健康主线',detail:'建立稳定睡眠与运动节律',progress:20}],actions:[]}}
+function load(){try{return Object.assign(seed(),JSON.parse(localStorage.getItem(KEY)||'{}'))}catch{return seed()}}function save(){localStorage.setItem(KEY,JSON.stringify(db))}function id(){return Date.now()+Math.random().toString(16).slice(2)}
+const $=s=>document.querySelector(s);const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function avg(a){return a.length?Math.round(a.reduce((x,y)=>x+y,0)/a.length):60}function scores(){let r=db.records.slice(-14),m=r.filter(x=>x.score).map(x=>x.score*10),b=r.filter(x=>x.type==='body').map(x=>x.score*10),f=r.filter(x=>x.type==='finance').map(x=>x.score*10);return{body:avg(b),mind:avg(m),finance:avg(f),ability:Math.min(95,55+db.records.filter(x=>x.type==='review').length*3),resource:Math.min(90,55+db.records.filter(x=>x.type==='social').length*3),emotion:avg(m)}}function total(){return avg(Object.values(scores()))}function today(){return new Date().toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric',weekday:'short'})}
+function toast(t){$('#toast').textContent=t;$('#toast').classList.add('show');setTimeout(()=>$('#toast').classList.remove('show'),1800)}
+function init(){ $('#date').textContent=today(); $('#nav').innerHTML=nav.map(n=>`<button class="nav" data-page="${n[0]}"><span>${n[1]}</span>${n[2]}<small>${n[3]}</small></button>`).join('');$('#bottom').innerHTML=nav.filter((_,i)=>[0,1,3,5,6].includes(i)).map(n=>`<button data-page="${n[0]}"><span>${n[1]}</span>${n[2].slice(0,2)}</button>`).join('');document.addEventListener('click',click);document.addEventListener('pointerdown',liquid);$('#menu').onclick=()=>{$('#side').classList.add('open');$('#scrim').classList.add('show')};$('#scrim').onclick=closeSide;$('#search').onclick=searchModal;$('#privacy').onclick=privacyModal;go(location.hash.slice(1)||'home');if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{})}
+function applySettings(){document.documentElement.dataset.theme=db.settings.theme||'forest';let b=$('#privacy');if(b)b.innerHTML=db.settings.avatar?`<img src="${db.settings.avatar}" alt="头像">`:'私'}
+function setTheme(t){db.settings.theme=t;save();applySettings();toast('主题色已更新')}
+function avatarFile(file){if(!file)return;let reader=new FileReader();reader.onload=()=>{let img=new Image();img.onload=()=>{let c=document.createElement('canvas'),size=180;c.width=size;c.height=size;let scale=Math.max(size/img.width,size/img.height),w=img.width*scale,h=img.height*scale;c.getContext('2d').drawImage(img,(size-w)/2,(size-h)/2,w,h);db.settings.avatar=c.toDataURL('image/jpeg',.82);save();applySettings();privacyModal();toast('头像已更新')};img.src=reader.result};reader.readAsDataURL(file)}
+function liquid(e){let b=e.target.closest('button,.quick button,.tab,.secondary,.primary,.danger');if(!b)return;let r=document.createElement('i'),box=b.getBoundingClientRect();r.className='liquid-ripple';r.style.left=(e.clientX-box.left)+'px';r.style.top=(e.clientY-box.top)+'px';b.appendChild(r);setTimeout(()=>r.remove(),650)}
+function closeSide(){$('#side').classList.remove('open');$('#scrim').classList.remove('show')}function go(p){page=nav.some(n=>n[0]===p)?p:'home';let n=nav.find(n=>n[0]===page);$('#title').textContent=n[2];$('#level').textContent=n[3]+' · '+({L0:'DATA SOURCE',L1:'LIFE ARCHIVE',L2:'AI ASSESSMENT',L3:'LIFE PLANNING',L4:'ACTION SYSTEM',L5:'SMART REMIND'}[n[3]]);document.querySelectorAll('[data-page]').forEach(x=>x.classList.toggle('active',x.dataset.page===page));window.history.replaceState(null,'','#'+page);closeSide();render()}
+function click(e){let p=e.target.closest('[data-page]');if(p)return go(p.dataset.page);let q=e.target.closest('[data-record]');if(q){type=q.dataset.record;go('record')}let tab=e.target.closest('[data-type]');if(tab){type=tab.dataset.type;render()}let done=e.target.closest('[data-task]');if(done){let t=db.tasks.find(x=>x.id===done.dataset.task);t.done=!t.done;save();render();toast(t.done?'已完成，结果已回流':'已恢复任务')}let del=e.target.closest('[data-del-record]');if(del&&confirm('删除这条记录？')){db.records=db.records.filter(x=>x.id!==del.dataset.delRecord);save();render()}let rdone=e.target.closest('[data-remind]');if(rdone){let r=db.reminders.find(x=>x.id===rdone.dataset.remind);r.done=!r.done;save();render()}if(e.target.closest('[data-close]'))closeModal()}
+function hero(title,desc){return`<div class="hero"><div><h2>${title}</h2><p>${desc}</p></div><div class="ring" style="--n:${total()}"><b>${total()}</b></div></div>`}
+function bars(){let s=scores();return`<div class="bars">${Object.entries(s).map(([k,v])=>`<div class="barrow"><span>${dims[k]}</span><div class="bar"><i style="width:${v}%"></i></div><b>${v}</b></div>`).join('')}</div>`}
+function home(){let done=db.tasks.filter(x=>x.done).length,latest=db.records.slice(-3).reverse();return hero('今天，也在稳稳地向前','不追求一次改变人生，只关注今天最值得投入的能量。每次记录都会更新你的判断与建议。')+`<div class="grid g4"><div class="card metric"><small>今日记录</small><strong>${db.records.filter(x=>new Date(x.created).toDateString()===new Date().toDateString()).length}<small> / 8 项</small></strong></div><div class="card metric"><small>行动完成</small><strong>${done}<small> / ${db.tasks.length} 项</small></strong></div><div class="card metric"><small>当前状态</small><strong>${total()>75?'适合冲刺':total()>60?'稳步推进':'优先蓄力'}</strong></div><div class="card metric"><small>提醒待响应</small><strong>${db.reminders.filter(x=>!x.done).length}<small> 项</small></strong></div></div><br><div class="grid g2"><div class="card"><div class="head"><b>六维能量雷达</b><button class="link" data-page="energy">查看诊断 →</button></div>${bars()}</div><div class="card"><div class="head"><b>快速记录</b><button class="link" data-page="record">全部记录 →</button></div><div class="quick">${Object.entries(recordTypes).map(([k,v])=>`<button data-record="${k}"><span>${v[1]}</span>${v[0].slice(0,4)}</button>`).join('')}</div></div><div class="card"><div class="head"><b>今日行动</b><button class="link" data-page="action">管理行动 →</button></div>${taskList(db.tasks)}</div><div class="card"><div class="head"><b>AI 今日研判</b><span class="pill">动态生成</span></div><div class="ai">${insight()}</div><div class="head" style="margin-top:18px"><b>最近沉淀</b></div>${latest.length?latest.map(x=>`<div class="task"><div><b>${recordTypes[x.type][0]}</b><small>${esc(x.note||x.event||'完成一条记录')}</small></div></div>`).join(''):'<div class="empty">完成第一条记录后，成长轨迹会出现在这里</div>'}</div></div>`}
+function insight(){let s=scores(),low=Object.entries(s).sort((a,b)=>a[1]-b[1])[0];if(!db.records.length)return'还没有足够的个人数据。建议从心情、身体和待办三项开始，约 2 分钟即可完成第一轮状态识别。';return`当前综合能量 ${total()} 分，${total()>70?'具备推进重点事项的承载力':'更适合控制任务密度'}。六维中「${dims[low[0]]}」相对偏低（${low[1]}分），今天优先安排一个低成本修复动作，避免以意志力硬撑。`}
+function record(){return`<div class="tabs">${Object.entries(recordTypes).map(([k,v])=>`<button class="tab ${k===type?'active':''}" data-type="${k}">${v[1]} ${v[0]}</button>`).join('')}</div><div class="grid g2"><div class="card"><div class="head"><b>${recordTypes[type][0]} · 轻量记录</b><span class="pill">约 1 分钟</span></div><form id="recordForm">${recordFields(type)}<div class="actions"><button type="reset" class="secondary">清空</button><button type="submit" id="saveRecord" class="primary">保存并自动研判</button></div></form></div><div class="card"><div class="head"><b>历史记录</b><span class="pill">可追溯</span></div>${history(type)}</div></div>`}
+function field(label,name,type='text',placeholder='',options=[]){if(type==='select')return`<div class="field"><label>${label}</label><select name="${name}">${options.map(x=>`<option>${x}</option>`).join('')}</select></div>`;if(type==='textarea')return`<div class="field full"><label>${label}</label><textarea name="${name}" placeholder="${placeholder}"></textarea></div>`;return`<div class="field"><label>${label}</label><input name="${name}" type="${type}" placeholder="${placeholder}"></div>`}
+function chips(label,name,items){return`<div class="field full"><label>${label}</label><div class="chipset">${items.map((x,i)=>`<label><input type="radio" name="${name}" value="${x}" ${i===0?'checked':''}><span>${x}</span></label>`).join('')}</div></div>`}
+function recordFields(t){
+ let score=`<div class="field full"><label>今日状态评分 1–10</label><div class="range"><input name="score" type="range" min="1" max="10" value="7" oninput="this.nextElementSibling.textContent=this.value"><b>7</b></div></div>`, body='';
+ if(t==='mood')body=chips('此刻主要情绪','mood',['平静','开心','焦虑','低落','愤怒','疲惫'])+field('触发事件','event','textarea','一句话说明发生了什么')+field('真正诉求','need','text','我现在最需要什么')+field('准备如何回应','note','textarea','下一步最小调节动作');
+ if(t==='finance')body=field('金额','amount','number','收入填正数，支出填负数')+field('收支类别','category','select','',['餐饮','交通','居住','学习','健康','人情','娱乐','工资','投资','其他'])+chips('必要程度','necessary',['必要','可优化','非必要'])+field('具体事项','event','text','这笔钱花在/来自哪里')+field('备注','note','textarea','是否符合预算、后续是否调整');
+ if(t==='secret')body=chips('困扰强度','intensity',['轻微','明显','很强'])+field('我真正想说的话','event','textarea','这里仅保存在当前设备，写下最真实的想法')+field('我担心的是什么','fear','textarea','把模糊的不安说具体')+field('此刻最需要的支持','note','textarea','倾听、休息、行动、边界或其他');
+ if(t==='review')body=field('今天哪件事值得复盘','event','textarea','工作、生活、决策或沟通事件')+chips('结果判断','result',['有效','一般','踩坑'])+field('真正原因','reason','textarea','哪些做法导致了这个结果')+field('下次复用 / 避免','note','textarea','形成一句可执行经验');
+ if(t==='body')body=field('睡眠时长（小时）','sleep','number','例如 7.5')+chips('睡眠质量','sleepQuality',['良好','一般','较差'])+field('精力水平','energy','select','',['充沛','够用','疲惫','透支'])+field('运动分钟','exercise','number','例如 30')+field('饮食情况','diet','select','',['规律均衡','基本正常','偏油/甜','不规律'])+field('身体不适','event','text','无则填写“无”')+field('今日身体调整','note','textarea','今晚准备几点睡、是否运动等');
+ if(t==='time')body=field('专注工作（分钟）','focus','number','例如 180')+field('学习成长（分钟）','study','number','例如 45')+field('运动休息（分钟）','rest','number','例如 60')+field('娱乐社交（分钟）','leisure','number','例如 90')+field('无效耗时（分钟）','waste','number','例如 30')+field('今日核心产出','event','textarea','最有价值的结果是什么')+field('时间漏洞与调整','note','textarea','明天准备减少或增加什么');
+ if(t==='todo')body=field('事项名称','event','text','一件明确可完成的事')+chips('优先级','priority',['重要紧急','重要不急','一般'])+field('计划完成时间','deadline','datetime-local')+field('完成质量','quality','select','',['超预期','达标','勉强','未完成'])+field('未完成原因 / 成果说明','note','textarea','写清结果或阻碍，便于判断执行力');
+ if(t==='social')body=field('关键人物 / 场景','person','text','与谁、在哪里')+chips('影响方向','impact',['积极','中性','消耗'])+field('发生了什么','event','textarea','只记录客观事实')+field('对方反馈 / 我的感受','feedback','textarea','分开事实与判断')+field('边界或下一步','note','textarea','需要沟通、保持距离或继续合作');
+ return`<div class="form">${score}${body}<div class="field full"><label>关键词（选填）</label><input name="tags" placeholder="用逗号分隔，方便以后搜索"></div></div>`
+}function history(t){let a=db.records.filter(x=>x.type===t).slice().reverse();return a.length?a.map(x=>`<div class="timeline"><time>${new Date(x.created).toLocaleDateString()}<br>${new Date(x.created).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</time><div><b>${x.score||'-'} 分 · ${esc(x.tags||'无标签')}</b><p>${esc(x.note||x.event||'已记录')}</p><button class="link" data-del-record="${x.id}">删除</button></div></div>`).join(''):'<div class="empty">此模块暂无记录</div>'}
+function archive(){let fields=[['traits','个人基础核心数据','性格、思维模式、原则、优势与短板'],['health','身体健康状态','体检、作息、运动与既往问题'],['finance','财务状况数据','资产负债、储蓄、消费习惯与风险'],['skills','工作技能资产','技能、证书、熟练度与成长轨迹'],['experience','工作与生活经验','项目成果、复盘、人脉与认知迭代'],['position','人生定位档案','长期赛道、节奏与价值输出方向']];return hero('长期档案，是判断的地基','L1 只接受你的真实输入与 L0 自动汇总；系统读取并分析，但不会替你篡改原始事实。')+`<form id="profileForm"><div class="grid g2">${fields.map(f=>`<div class="card field"><label>${f[1]}</label><small class="muted">${f[2]}</small><textarea name="${f[0]}" placeholder="尚未填写">${esc(db.profile[f[0]])}</textarea></div>`).join('')}</div><div class="actions"><button class="primary">保存基础档案</button></div></form>`}
+function energy(){let s=scores(),sorted=Object.entries(s).sort((a,b)=>b[1]-a[1]);return hero('此刻的你，适合怎样前进？','评分由最近日度记录、行动完成与长期档案综合估算；记录越持续，判断越贴近真实状态。')+`<div class="grid g3">${Object.entries(s).map(([k,v])=>`<div class="card dim"><span class="pill">${v>=75?'优势区':v>=60?'稳定区':'关注区'}</span><h3>${dims[k]}能量</h3><div class="big">${v}</div><div class="progress"><i style="width:${v}%"></i></div><p>${v>=75?'当前承载良好，可安排有挑战的推进动作。':v>=60?'保持节奏，以稳定复利为主。':'减少硬撑，优先安排低成本修复。'}</p></div>`).join('')}</div><br><div class="grid g2"><div class="card"><div class="head"><b>可做事项精准盘点</b></div>${[['完全能做',sorted[0]],['可尝试',sorted[1]],['勉强承接',sorted[4]],['暂不适合',sorted[5]]].map((x,i)=>`<div class="plan"><span>${i+1}</span><div><b>${x[0]}</b><p>基于${dims[x[1][0]]}能量 ${x[1][1]} 分动态判定</p></div></div>`).join('')}</div><div class="card"><div class="head"><b>短板与风险诊断</b><span class="pill">自动更新</span></div><div class="ai">当前最值得关注的是「${dims[sorted[5][0]]}」。建议未来 7 天不同时增加多个高难目标，只选择一个可验证的小动作。</div><div class="head" style="margin-top:18px"><b>优势资产</b></div><p class="muted">${dims[sorted[0][0]]}是当前相对优势。把它用作其他目标的支点，而不是继续无限加码。</p></div></div>`}
+function plan(){return hero('三年有方向，今天有落点','六条主线共同构成人生规划。可直接编辑目标与进度，行动层会据此提供当下落点。')+`<div class="grid g2"><div class="card"><div class="head"><b>三年核心总规划</b><button class="link" id="addGoal">＋新增主线</button></div>${db.goals.map(g=>`<div class="plan"><span>${esc(g.icon)}</span><div><b>${esc(g.name)}</b><p>${esc(g.detail)}</p><div class="progress"><i style="width:${g.progress}%"></i></div></div><small>${g.progress}%</small></div>`).join('')}</div><div class="card"><div class="head"><b>年度节奏建议</b><span class="pill">AI 研判</span></div><div class="ai">第一阶段先稳定基础系统：健康节律、现金储备与可复用能力；第二阶段集中突破一条职业主线；第三阶段沉淀影响力与可持续价值输出。</div><br><div class="head"><b>定位提示</b></div><p class="muted">${esc(db.profile.position||'在基础档案填写长期赛道、工作节奏和价值输出方向后，这里将成为所有规划的边界条件。')}</p></div></div>`}
+function taskList(a){return a.length?a.map(t=>`<div class="task ${t.done?'done':''}"><button class="check" data-task="${t.id}">${t.done?'✓':''}</button><div><b>${esc(t.name)}</b><small>${esc(t.cat)} · ${t.done?'已完成并回流':'等待执行'}</small></div></div>`).join(''):'<div class="empty">暂无行动</div>'}
+function action(){return hero('把成长拆成可完成的一小步','方案会随能量、目标与执行反馈调整。优先低成本、可验收、不过度依赖意志力的动作。')+`<div class="grid g2"><div class="card"><div class="head"><b>日常成长执行清单</b><button class="link" id="addTask">＋添加行动</button></div>${taskList(db.tasks)}</div><div class="card"><div class="head"><b>动态调整策略</b><span class="pill">${total()>70?'推进模式':'低耗模式'}</span></div><div class="ai">${total()>70?'状态允许推进：每天安排 1 个高价值任务，仍保留 20% 缓冲。':'当前采用低耗模式：缩短任务时长、降低并行量，优先恢复身体与情绪承载。'}</div><br><div class="head"><b>短板提升路径</b></div><p class="muted">练习频次：每周 3 次微行动；验收标准：连续两周完成率 ≥ 70%；避坑：不在低能量时临时追加目标。</p><div class="head"><b>优势绽放路径</b></div><p class="muted">每周至少输出一次可复用成果，把当前优势转化为作品、方法或对外价值。</p></div></div>`}
+function remind(){let ai=[['能量适配提醒',total()<60?'今天减少非必要安排，优先恢复。':'今天可推进一个高价值事项。'],['成长复盘提醒','本周记录将用于更新短板与优势判断。'],['目标进度提醒','选择一条三年主线，完成一个 20 分钟动作。']];return hero('在合适的时候，提醒真正重要的事','自定义提醒与基于全层数据生成的动态提醒并行；完成反馈会回流并优化后续频率。')+`<div class="grid g2"><div class="card"><div class="head"><b>我的提醒库</b><button class="link" id="addReminder">＋新建提醒</button></div>${db.reminders.map(r=>`<div class="task ${r.done?'done':''}"><button class="check" data-remind="${r.id}">${r.done?'✓':''}</button><div><b>${esc(r.name)}</b><small>${esc(r.kind)} · ${esc(r.time)}</small></div></div>`).join('')}</div><div class="card"><div class="head"><b>AI 动态提醒</b><span class="pill">防打扰模式</span></div>${ai.map((x,i)=>`<div class="plan"><span>${['◉','↻','◇'][i]}</span><div><b>${x[0]}</b><p>${x[1]}</p></div></div>`).join('')}<p class="muted">调度规则：高风险优先；同类提醒阶梯降频；已完成不重复打扰；默认 22:00–08:00 免打扰。</p></div></div>`}
+function render(){let fn={home,record,archive,energy,plan,action,remind}[page];$('#content').innerHTML=fn();bindForms()}
+function bindForms(){let f=$('#recordForm');if(f)f.onsubmit=e=>{e.preventDefault();try{let o={};new FormData(e.currentTarget).forEach((v,k)=>o[k]=v);db.records.push(Object.assign({},o,{id:id(),type:type,score:Number(o.score)||7,created:new Date().toISOString()}));save();render();toast('已沉淀到档案，并更新能量研判')}catch(err){console.error(err);alert('保存失败：'+err.message)}};f=$('#profileForm');if(f)f.onsubmit=e=>{e.preventDefault();db.profile=Object.fromEntries(new FormData(f));save();toast('基础档案已保存')};let a=$('#addTask');if(a)a.onclick=()=>inputModal('添加行动','行动名称','添加',v=>{db.tasks.push({id:id(),name:v,cat:'自定义',done:false});save();render()});a=$('#addReminder');if(a)a.onclick=()=>formModal('新建提醒',`<div class="form"><div class="field full"><label>提醒事项</label><input name="name" required></div><div class="field"><label>类型</label><select name="kind"><option>单次</option><option>周期</option><option>倒计时</option></select></div><div class="field"><label>时间 / 规则</label><input name="time" placeholder="明天 09:00"></div></div>`,o=>{db.reminders.push({id:id(),...o,done:false});save();render()});a=$('#addGoal');if(a)a.onclick=()=>inputModal('新增规划主线','目标名称','添加',v=>{db.goals.push({id:id(),icon:'新',name:v,detail:'等待进一步拆解',progress:0});save();render()})}
+function modal(title,body){$('#modal').innerHTML=`<div class="backdrop"><div class="modalbox"><div class="modalhead"><h2>${title}</h2><button class="close" data-close>×</button></div>${body}</div></div>`}function closeModal(){$('#modal').innerHTML=''}
+function inputModal(title,ph,btn,cb){modal(title,`<form id="mini"><div class="field"><input name="value" required placeholder="${ph}" autofocus></div><div class="actions"><button type="button" class="secondary" data-close>取消</button><button class="primary">${btn}</button></div></form>`);$('#mini').onsubmit=e=>{e.preventDefault();cb(new FormData(e.target).get('value'));closeModal();toast('已添加')}}function formModal(title,fields,cb){modal(title,`<form id="mini">${fields}<div class="actions"><button type="button" class="secondary" data-close>取消</button><button class="primary">保存</button></div></form>`);$('#mini').onsubmit=e=>{e.preventDefault();cb(Object.fromEntries(new FormData(e.target)));closeModal();toast('提醒已创建')}}
+function searchModal(){modal('全局搜索',`<div class="field"><input id="q" placeholder="搜索记录、目标、行动、提醒..." autofocus></div><div id="results" class="empty">输入关键词开始搜索</div>`);$('#q').oninput=e=>{let q=e.target.value.trim().toLowerCase(),all=[...db.records.map(x=>({t:recordTypes[x.type][0],d:(x.event||'')+' '+(x.note||'')+' '+(x.tags||'')})),...db.tasks.map(x=>({t:'行动',d:x.name})),...db.reminders.map(x=>({t:'提醒',d:x.name+' '+x.time})),...db.goals.map(x=>({t:'规划',d:x.name+' '+x.detail}))].filter(x=>(x.t+x.d).toLowerCase().includes(q));$('#results').innerHTML=q?(all.length?all.map(x=>`<div class="result"><b>${esc(x.t)}</b><small>${esc(x.d)}</small></div>`).join(''):'<div class="empty">没有匹配结果</div>'):'<div class="empty">输入关键词开始搜索</div>'}}
+function reportHtml(){
+ let sc=scores(),created=new Date().toLocaleString('zh-CN'),records=db.records.slice().reverse(),completed=db.tasks.filter(x=>x.done).length;
+ let profileNames={traits:'个人基础核心数据',health:'身体健康状态',finance:'财务状况数据',skills:'工作技能资产',experience:'工作与生活经验',position:'人生定位档案'};
+ let css=`*{box-sizing:border-box}body{margin:0;color:#18302e;font-family:"Microsoft YaHei",sans-serif;background:#eee}main{width:210mm;min-height:297mm;margin:18px auto;background:#fff;padding:18mm 16mm;box-shadow:0 4px 24px #0002}h1,h2{font-family:Georgia,"Songti SC",serif}h1{font-size:28px;margin:0}h2{font-size:18px;border-bottom:2px solid #173f3c;padding-bottom:7px;margin-top:28px}.cover{padding:22mm 0 15mm;border-bottom:1px solid #ccd7d2}.eyebrow{color:#e97845;font-weight:bold;letter-spacing:2px;font-size:11px}.sub{color:#71817e;margin-top:10px}.meta{font-size:11px;color:#71817e;margin-top:25px}.scores{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.score{border:1px solid #d9dfdc;padding:12px;border-radius:8px}.score b{display:block;font-size:23px;margin-top:4px}.summary{background:#f5f1e9;border-left:4px solid #e97845;padding:12px;line-height:1.8}.item{padding:10px 0;border-bottom:1px solid #e7e7e2}.item b{font-size:13px}.item p{white-space:pre-wrap;margin:5px 0;color:#526460;line-height:1.7;font-size:12px}.tag{display:inline-block;background:#e1ece7;padding:3px 7px;border-radius:12px;font-size:10px;margin-right:5px}.empty{color:#899693;font-style:italic}.toolbar{position:fixed;right:22px;top:22px;display:flex;gap:8px}.toolbar button{border:0;border-radius:7px;padding:10px 14px;background:#173f3c;color:#fff;cursor:pointer}.toolbar button.alt{background:#e97845}@page{size:A4;margin:12mm}@media print{body{background:#fff}.toolbar{display:none}main{width:auto;min-height:auto;margin:0;padding:0;box-shadow:none}h2{break-after:avoid}.item,.score{break-inside:avoid}}`;
+ let profile=Object.entries(profileNames).map(([k,n])=>`<div class="item"><b>${n}</b><p>${esc(db.profile[k]||'尚未填写')}</p></div>`).join('');
+ let rec=records.length?records.map(x=>`<div class="item"><b>${recordTypes[x.type]?recordTypes[x.type][0]:x.type} · ${x.score||'-'} 分</b><p>${new Date(x.created).toLocaleString('zh-CN')}　${x.tags?`<span class="tag">${esc(x.tags)}</span>`:''}</p><p>${esc(x.event||'')}${x.note?`\n复盘：${esc(x.note)}`:''}</p></div>`).join(''):'<p class="empty">暂无每日记录</p>';
+ let goals=db.goals.length?db.goals.map(x=>`<div class="item"><b>${esc(x.name)} · ${x.progress}%</b><p>${esc(x.detail)}</p></div>`).join(''):'<p class="empty">暂无规划</p>';
+ let tasks=db.tasks.length?db.tasks.map(x=>`<div class="item"><b>${x.done?'☑':'☐'} ${esc(x.name)}</b><p>${esc(x.cat)} · ${x.done?'已完成并回流':'等待执行'}</p></div>`).join(''):'<p class="empty">暂无行动</p>';
+ let reminders=db.reminders.length?db.reminders.map(x=>`<div class="item"><b>${x.done?'☑':'☐'} ${esc(x.name)}</b><p>${esc(x.kind)} · ${esc(x.time)}</p></div>`).join(''):'<p class="empty">暂无提醒</p>';
+ return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>人生档案报告</title><style>${css}</style></head><body><div class="toolbar"><button onclick="window.print()">打印 / 另存为 PDF</button><button class="alt" onclick="downloadReport()">下载 HTML 报告</button></div><main><section class="cover"><div class="eyebrow">PERSONAL LIFE ARCHIVE</div><h1>AI 专属人生档案报告</h1><div class="sub">记录 · 沉淀 · 诊断 · 规划 · 执行 · 提醒</div><div class="meta">生成时间：${created}<br>数据范围：当前设备中的全部人生档案数据</div></section><h2>一、综合状态摘要</h2><div class="summary">${insight()} 当前共沉淀 ${db.records.length} 条记录，完成 ${completed}/${db.tasks.length} 项行动。</div><h2>二、六维能量评估</h2><div class="scores">${Object.entries(sc).map(([k,v])=>`<div class="score"><span>${dims[k]}能量</span><b>${v}</b></div>`).join('')}</div><h2>三、个人基础档案</h2>${profile}<h2>四、三年人生规划</h2>${goals}<h2>五、行动执行情况</h2>${tasks}<h2>六、智能提醒</h2>${reminders}<h2>七、每日记录明细</h2>${rec}<p class="meta">本报告由“人生档案 · Personal OS”在本地生成。内容仅供个人复盘与规划参考，请妥善保管。</p></main><script>function downloadReport(){const h=document.documentElement.outerHTML;const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([h],{type:'text/html;charset=utf-8'}));a.download='人生档案可读报告-'+new Date().toISOString().slice(0,10)+'.html';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}<\/script></body></html>`
+}
+function openReport(){let w=window.open('','_blank');if(!w){alert('浏览器阻止了报告窗口，请允许本站弹出窗口后重试。');return}w.document.open();w.document.write(reportHtml());w.document.close()}
+function privacyModal(){
+ let themes=[['forest','森林绿','#173f3c'],['ocean','海洋蓝','#164c63'],['rose','暖玫瑰','#704653'],['amber','琥珀棕','#6b4d2e'],['violet','暮紫色','#4f466e']];
+ modal('个人设置与数据',`<div class="settings-title">个人头像</div><div class="avatar-setting"><div class="avatar-preview">${db.settings.avatar?`<img src="${db.settings.avatar}">`:'私'}</div><div><label class="primary upload">选择头像<input id="avatarInput" type="file" accept="image/*" hidden></label>${db.settings.avatar?'<button class="secondary" id="removeAvatar">移除头像</button>':''}<p class="muted">图片仅压缩保存在当前设备，不会上传。</p></div></div><div class="settings-title">主题色</div><div class="theme-list">${themes.map(x=>`<button class="theme-dot ${db.settings.theme===x[0]?'selected':''}" data-theme="${x[0]}" style="--dot:${x[2]}"><i></i>${x[1]}</button>`).join('')}</div><div class="settings-title">报告与备份</div><div class="ai">你的树洞、情绪、财务和档案不会自动上传服务器。可读报告用于查看和打印，原始备份用于恢复。</div><br><div class="grid g2"><button class="primary" id="report">生成可打印人生档案报告</button><button class="secondary" id="export">导出原始数据备份</button><label class="secondary" style="text-align:center">导入备份<input id="import" type="file" accept=".json" hidden></label><button class="danger" id="wipe">清空本机数据</button><button class="secondary" id="install">安装到桌面 / 主屏</button></div>`);
+ $('#avatarInput').onchange=e=>avatarFile(e.target.files[0]);let ra=$('#removeAvatar');if(ra)ra.onclick=()=>{db.settings.avatar='';save();applySettings();privacyModal();toast('头像已移除')};document.querySelectorAll('[data-theme]').forEach(x=>x.onclick=()=>{setTheme(x.dataset.theme);privacyModal()});$('#report').onclick=openReport;$('#export').onclick=()=>{let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(db,null,2)],{type:'application/json'}));a.download='人生档案备份-'+new Date().toISOString().slice(0,10)+'.json';a.click();toast('备份已导出')};$('#import').onchange=e=>{let reader=new FileReader();reader.onload=()=>{try{db=Object.assign(seed(),JSON.parse(reader.result));db.settings=db.settings||{theme:'forest',avatar:''};save();applySettings();closeModal();render();toast('备份已恢复')}catch{toast('备份文件无效')}};reader.readAsText(e.target.files[0])};$('#wipe').onclick=()=>{if(confirm('确认清空全部私人数据？此操作不可撤销。')){localStorage.removeItem(KEY);db=seed();db.settings={theme:'forest',avatar:''};save();applySettings();closeModal();render();toast('本机数据已清空')}};$('#install').onclick=async()=>{if(installPrompt){installPrompt.prompt();await installPrompt.userChoice;installPrompt=null}else toast('如未弹出安装框，请使用浏览器菜单中的“安装应用/添加到主屏幕”')}
+}
+init();})();
 
-  // ============ 渲染函数 ============
-  function renderSidebar() {
-    const nav = document.getElementById('sidebarNav');
-    if (!state.content) return;
-    nav.innerHTML = state.content.sections
-      .filter(s => s.showInNav !== false)
-      .map(s => `
-        <a href="#${s.id}" class="sidebar-nav-item" data-section="${s.id}">
-          <span class="ico">${s.icon || '•'}</span>
-          <span>${s.name}</span>
-        </a>
-      `).join('');
-    nav.querySelectorAll('.sidebar-nav-item').forEach(el => {
-      el.addEventListener('click', e => {
-        e.preventDefault();
-        navigateTo(el.dataset.section);
-        closeSidebar();
-      });
-    });
-  }
 
-  function navigateTo(sectionId, params = {}) {
-    state.currentSection = sectionId;
-    document.querySelectorAll('.sidebar-nav-item').forEach(el => {
-      el.classList.toggle('active', el.dataset.section === sectionId);
-    });
-    if (sectionId === 'cases' && params.sub) {
-      state.currentCaseSub = params.sub;
-    }
-    if (sectionId === 'materials' && params.materialFilter) {
-      state.materialFilter = { ...state.materialFilter, ...params.materialFilter };
-    }
-    renderMain();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    // 更新 hash 但不触发跳转
-    history.replaceState(null, '', '#' + sectionId);
-  }
 
-  function renderMain() {
-    const main = document.getElementById('main');
-    if (!state.content) {
-      main.innerHTML = '<div class="loading"><div class="spinner"></div><p>正在加载公司信息...</p></div>';
-      return;
-    }
-    const section = state.content.sections.find(s => s.id === state.currentSection);
-    if (!section) { main.innerHTML = '<div class="content-wrap"><p>未找到该板块</p></div>'; return; }
-    let html = '';
-    switch (section.id) {
-      case 'home': html = renderHome(section); break;
-      case 'about': html = renderAbout(section); break;
-      case 'qualification': html = renderQualification(section); break;
-      case 'advantage': html = renderAdvantage(section); break;
-      case 'cases': html = renderCases(section); break;
-      case 'materials': html = renderMaterials(); break;
-      case 'contact': html = renderContact(section); break;
-      default: html = '<div class="content-wrap">该板块暂无内容</div>';
-    }
-    main.innerHTML = `<div class="fade-in">${html}</div>`;
-    bindMainEvents();
-  }
 
-  function sectionHero(section) {
-    return `
-      <div class="section-hero">
-        <div class="ico">${section.icon || ''}</div>
-        <h1>${section.name}</h1>
-        <div class="en">${section.nameEn || ''}</div>
-      </div>
-    `;
-  }
 
-  // ============ 各板块渲染 ============
-  function renderHome(section) {
-    const page = section.pages[0];
-    return `
-      <div class="cover-page">
-        <img src="${page.image}" alt="${state.content.company.name}">
-        <div class="cover-page-text">
-          <h1>${page.subtitle || state.content.company.name}</h1>
-          <div class="en">${state.content.company.nameEn || ''}</div>
-        </div>
-      </div>
-    `;
-  }
 
-  function renderAbout(section) {
-    const page = section.pages[0];
-    return `
-      ${sectionHero(section)}
-      <div class="content-wrap">
-        <div class="card">
-          <div class="card-title">${page.title}</div>
-          <div class="timeline">
-            ${page.items.map(it => `
-              <div class="timeline-item">
-                <div class="timeline-year">${it.year}</div>
-                <div class="timeline-event">${it.event}</div>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-        ${page.image ? `<div class="card" style="padding: 0; overflow: hidden;">
-          <img src="${page.image}" alt="${page.title}" style="width: 100%; cursor: zoom-in;" data-gallery="false">
-        </div>` : ''}
-      </div>
-    `;
-  }
 
-  function renderQualification(section) {
-    const pages = section.pages;
-    return `
-      ${sectionHero(section)}
-      <div class="content-wrap">
-        ${pages.map(p => {
-          if (p.type === 'qualification-list') {
-            return `
-              <div class="card">
-                <div class="card-title">${p.title}</div>
-                <ul class="qual-list">
-                  ${p.items.map(i => `<li>${i}</li>`).join('')}
-                </ul>
-              </div>
-            `;
-          }
-          if (p.type === 'image-gallery') {
-            return `
-              <div class="card">
-                <div class="card-title">${p.title}</div>
-                ${p.description ? `<p style="color: var(--text-soft); margin-bottom: 12px; font-size: 14px;">${p.description}</p>` : ''}
-                <div class="image-gallery">
-                  ${p.images.map(src => `<img src="${src}" alt="${p.title}" data-gallery-group="qual-${p.title}">`).join('')}
-                </div>
-              </div>
-            `;
-          }
-          if (p.type === 'image') {
-            return `
-              <div class="card">
-                <div class="card-title">${p.title}</div>
-                ${p.description ? `<p style="color: var(--text-soft); margin-bottom: 12px; font-size: 14px;">${p.description}</p>` : ''}
-                <img src="${p.image}" alt="${p.title}" style="border-radius: 8px; width: 100%;" data-gallery="false">
-              </div>
-            `;
-          }
-          return '';
-        }).join('')}
-      </div>
-    `;
-  }
 
-  function renderAdvantage(section) {
-    const page = section.pages[0];
-    return `
-      ${sectionHero(section)}
-      <div class="content-wrap">
-        <div class="card">
-          <div class="card-title">${page.title}</div>
-          <p style="color: var(--text-soft); margin-bottom: 16px; text-align: center; font-size: 15px;">${page.subtitle || ''}</p>
-          <div class="advantage-grid">
-            ${page.items.map(a => `
-              <div class="adv-item">
-                <h3>${a.name}</h3>
-                <div class="adv-metric">${a.metric}</div>
-                <p>${a.description}</p>
-              </div>
-            `).join('')}
-          </div>
-          ${page.capabilities ? `
-            <div class="adv-capability">
-              <h3>🌟 我们的能力</h3>
-              <ul>
-                ${page.capabilities.map(c => `<li>${c}</li>`).join('')}
-              </ul>
-            </div>
-          ` : ''}
-        </div>
-      </div>
-    `;
-  }
-
-  function renderCases(section) {
-    const subs = section.subCategories;
-    const current = subs.find(s => s.id === state.currentCaseSub) || subs[0];
-    return `
-      ${sectionHero(section)}
-      <div class="content-wrap">
-        <div class="case-tabs">
-          ${subs.map(s => `
-            <button class="case-tab ${s.id === current.id ? 'active' : ''}" data-sub="${s.id}">${s.name}</button>
-          `).join('')}
-        </div>
-        <div id="caseTabContent">
-          ${renderCaseSub(current)}
-        </div>
-      </div>
-    `;
-  }
-
-  function renderCaseSub(sub) {
-    const featured = sub.featured || [];
-    const more = sub.moreList || [];
-    return `
-      ${featured.length ? `
-        <div class="case-featured">
-          ${featured.map(c => `
-            <div class="case-card">
-              <div class="case-card-images ${(c.images||[]).length <= 1 ? 'single' : ''}">
-                ${(c.images || []).slice(0, 5).map(src => `<img src="${src}" alt="${c.name}" data-gallery-group="case-${sub.id}-${c.name}" loading="lazy">`).join('')}
-              </div>
-              <div class="case-card-body">
-                ${c.brand ? `<div class="case-card-brand">${c.brand}</div>` : ''}
-                <div class="case-card-name">${c.name}</div>
-                ${c.location ? `<div class="case-card-location">${c.location}</div>` : ''}
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      ` : ''}
-      ${more.length ? `
-        <div class="more-list">
-          <h3>${sub.name}项目我们还服务过 ——</h3>
-          <ul>
-            ${more.map(i => `<li>${i}</li>`).join('')}
-          </ul>
-        </div>
-      ` : ''}
-    `;
-  }
-
-  // ============ 材料资源 ============
-  async function loadMaterials() {
-    const params = {};
-    if (state.materialFilter.category) params.category = state.materialFilter.category;
-    if (state.materialFilter.q) params.q = state.materialFilter.q;
-    try {
-      const data = await API.getMaterials(params);
-      state.materials = data.materials;
-    } catch (e) {
-      state.materials = [];
-    }
-    try {
-      const data = await API.getCategories();
-      state.categories = data.categories;
-    } catch (e) {
-      state.categories = [];
-    }
-  }
-
-  function renderMaterials() {
-    const cats = state.categories;
-    const items = state.materials;
-    return `
-      <div class="section-hero">
-        <div class="ico">📦</div>
-        <h1>材料资源</h1>
-        <div class="en">MATERIAL RESOURCES</div>
-      </div>
-      <div class="content-wrap">
-        <div class="materials-toolbar">
-          <input class="materials-search" id="matSearch" placeholder="🔍 搜索品类、品牌、联系方式..." value="${escapeAttr(state.materialFilter.q)}">
-        </div>
-        ${cats.length ? `
-          <div class="materials-toolbar" id="matChips">
-            <button class="materials-cat-chip ${!state.materialFilter.category ? 'active' : ''}" data-cat="">全部 (${items.length >= cats.reduce((s,c)=>s+c.n,0) ? items.length : cats.reduce((s,c)=>s+c.n,0)})</button>
-            ${cats.map(c => `
-              <button class="materials-cat-chip ${state.materialFilter.category === c.category ? 'active' : ''}" data-cat="${escapeAttr(c.category)}">${escapeHtml(c.category)} (${c.n})</button>
-            `).join('')}
-          </div>
-        ` : ''}
-        <div class="materials-list" id="matList">
-          ${renderMaterialList(items)}
-        </div>
-      </div>
-    `;
-  }
-
-  function renderMaterialList(items) {
-    if (!items.length) {
-      return `<div class="materials-empty">📭 暂无材料数据${state.materialFilter.category || state.materialFilter.q ? '（请尝试其他筛选条件）' : '，请等待管理员添加'}</div>`;
-    }
-    return items.map(m => {
-      const contactHtml = formatContact(m.contact);
-      return `
-        <div class="material-card">
-          <div class="material-cat">${escapeHtml(m.category)}</div>
-          <div class="material-brand">${escapeHtml(m.brand)}</div>
-          <div class="material-contact">
-            <span class="material-contact-label">📞 联系方式:</span>${contactHtml}
-          </div>
-          ${m.note ? `<div class="material-note">💬 ${escapeHtml(m.note)}</div>` : ''}
-        </div>
-      `;
-    }).join('');
-  }
-
-  function formatContact(text) {
-    // 识别手机号、邮箱、网址并生成可点击链接
-    const escaped = escapeHtml(text);
-    return escaped
-      .replace(/(\d{11})/g, '<a href="tel:$1">$1</a>')
-      .replace(/(\d{3,4}-?\d{7,8})/g, '<a href="tel:$1">$1</a>')
-      .replace(/([\w.-]+@[\w.-]+\.\w+)/g, '<a href="mailto:$1">$1</a>')
-      .replace(/(www\.[\w.-]+)/g, '<a href="https://$1" target="_blank" rel="noopener">$1</a>');
-  }
-
-  function renderContact(section) {
-    const page = section.pages[0];
-    const co = state.content.company;
-    return `
-      <div class="contact-page">
-        <h1>${page.title}</h1>
-        <div class="slogan">${page.slogan || ''}</div>
-        <div class="contact-info">
-          <div class="contact-info-row">
-            <span class="ico">🌐</span>
-            <span>官网：<a href="https://${co.website}" target="_blank" rel="noopener">${co.website}</a></span>
-          </div>
-          ${page.info && page.info.address ? `
-            <div class="contact-info-row">
-              <span class="ico">📍</span>
-              <span>${escapeHtml(page.info.address)}</span>
-            </div>
-          ` : ''}
-          ${page.info && page.info.phone ? `
-            <div class="contact-info-row">
-              <span class="ico">📞</span>
-              <span>电话：<a href="tel:${page.info.phone}">${escapeHtml(page.info.phone)}</a></span>
-            </div>
-          ` : ''}
-        </div>
-      </div>
-    `;
-  }
-
-  // ============ 事件绑定 ============
-  function bindMainEvents() {
-    // 案例 tab 切换
-    document.querySelectorAll('.case-tab').forEach(el => {
-      el.addEventListener('click', () => {
-        state.currentCaseSub = el.dataset.sub;
-        document.querySelectorAll('.case-tab').forEach(t => t.classList.toggle('active', t.dataset.sub === state.currentCaseSub));
-        const sub = state.content.sections.find(s => s.id === 'cases').subCategories.find(x => x.id === state.currentCaseSub);
-        document.getElementById('caseTabContent').innerHTML = renderCaseSub(sub);
-        attachLightbox();
-      });
-    });
-
-    // 材料 - 搜索
-    const searchEl = document.getElementById('matSearch');
-    if (searchEl) {
-      let timer = null;
-      searchEl.addEventListener('input', e => {
-        clearTimeout(timer);
-        timer = setTimeout(async () => {
-          state.materialFilter.q = e.target.value.trim();
-          await loadMaterials();
-          document.getElementById('matList').innerHTML = renderMaterialList(state.materials);
-        }, 250);
-      });
-    }
-    // 材料 - 分类筛选
-    document.querySelectorAll('.materials-cat-chip').forEach(el => {
-      el.addEventListener('click', async () => {
-        state.materialFilter.category = el.dataset.cat;
-        document.querySelectorAll('.materials-cat-chip').forEach(c => c.classList.toggle('active', c === el));
-        await loadMaterials();
-        document.getElementById('matList').innerHTML = renderMaterialList(state.materials);
-      });
-    });
-
-    attachLightbox();
-  }
-
-  // ============ Lightbox ============
-  let lightboxGroup = [];
-  let lightboxIndex = 0;
-  function attachLightbox() {
-    document.querySelectorAll('img[data-gallery-group]').forEach(img => {
-      img.addEventListener('click', () => {
-        const group = img.dataset.galleryGroup;
-        const allInGroup = Array.from(document.querySelectorAll(`img[data-gallery-group="${group}"]`));
-        lightboxGroup = allInGroup.map(i => i.src);
-        lightboxIndex = allInGroup.indexOf(img);
-        openLightbox();
-      });
-    });
-    document.querySelectorAll('img[data-gallery="false"]').forEach(img => {
-      img.addEventListener('click', () => {
-        lightboxGroup = [img.src];
-        lightboxIndex = 0;
-        openLightbox();
-      });
-    });
-  }
-
-  function openLightbox() {
-    const lb = document.getElementById('lightbox');
-    document.getElementById('lightboxImg').src = lightboxGroup[lightboxIndex];
-    lb.hidden = false;
-    document.body.style.overflow = 'hidden';
-  }
-  function closeLightbox() {
-    document.getElementById('lightbox').hidden = true;
-    document.body.style.overflow = '';
-  }
-  function nextLightbox() {
-    lightboxIndex = (lightboxIndex + 1) % lightboxGroup.length;
-    document.getElementById('lightboxImg').src = lightboxGroup[lightboxIndex];
-  }
-  function prevLightbox() {
-    lightboxIndex = (lightboxIndex - 1 + lightboxGroup.length) % lightboxGroup.length;
-    document.getElementById('lightboxImg').src = lightboxGroup[lightboxIndex];
-  }
-
-  // ============ 工具函数 ============
-  function escapeHtml(s) {
-    if (s == null) return '';
-    return String(s).replace(/[&<>"']/g, c => ({
-      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-    }[c]));
-  }
-  function escapeAttr(s) { return escapeHtml(s); }
-
-  // ============ 侧边栏 ============
-  function openSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    const backdrop = document.getElementById('backdrop');
-    if (sidebar) { sidebar.classList.add('open'); sidebar.style.transform = 'translateX(0)'; }
-    if (backdrop) backdrop.classList.add('show');
-  }
-  function closeSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    const backdrop = document.getElementById('backdrop');
-    if (sidebar) { sidebar.classList.remove('open'); sidebar.style.transform = ''; }
-    if (backdrop) backdrop.classList.remove('show');
-  }
-  // 全局事件委托：确保即使 JS 早期绑定失败也能响应
-  document.addEventListener('click', e => {
-    const closeBtn = e.target.closest('#closeSidebar');
-    if (closeBtn) { closeSidebar(); e.stopPropagation(); return; }
-    const menuBtn = e.target.closest('#menuBtn');
-    if (menuBtn) { openSidebar(); e.stopPropagation(); return; }
-    const backdrop = e.target.closest('#backdrop');
-    if (backdrop) { closeSidebar(); e.stopPropagation(); return; }
-  });
-
-  // ============ PWA 安装提示 ============
-  let deferredPrompt = null;
-  window.addEventListener('beforeinstallprompt', e => {
-    e.preventDefault();
-    deferredPrompt = e;
-    const tip = document.getElementById('installTip');
-    if (tip && !localStorage.getItem('pwa_install_dismissed')) {
-      tip.hidden = false;
-    }
-  });
-  const installBtn = document.getElementById('installBtn');
-  if (installBtn) {
-    installBtn.addEventListener('click', async () => {
-      if (deferredPrompt) {
-        deferredPrompt.prompt();
-        await deferredPrompt.userChoice;
-        deferredPrompt = null;
-      }
-      const tip = document.getElementById('installTip');
-      if (tip) tip.hidden = true;
-    });
-  }
-  const installClose = document.getElementById('installClose');
-  if (installClose) {
-    installClose.addEventListener('click', () => {
-      const tip = document.getElementById('installTip');
-      if (tip) tip.hidden = true;
-      localStorage.setItem('pwa_install_dismissed', '1');
-    });
-  }
-
-  // ============ 初始化 ============
-  async function init() {
-    // 绑定基础事件（带 null 防护）
-    function bindIf(id, event, handler) {
-      const el = document.getElementById(id);
-      if (el) el.addEventListener(event, handler);
-    }
-    bindIf('menuBtn', 'click', openSidebar);
-    bindIf('closeSidebar', 'click', closeSidebar);
-    bindIf('backdrop', 'click', closeSidebar);
-    bindIf('lightboxClose', 'click', closeLightbox);
-    bindIf('lightboxNext', 'click', nextLightbox);
-    bindIf('lightboxPrev', 'click', prevLightbox);
-    bindIf('lightbox', 'click', e => {
-      if (e.target.id === 'lightbox') closeLightbox();
-    });
-    document.addEventListener('keydown', e => {
-      const lb = document.getElementById('lightbox');
-      if (!lb || lb.hidden) return;
-      if (e.key === 'Escape') closeLightbox();
-      if (e.key === 'ArrowRight') nextLightbox();
-      if (e.key === 'ArrowLeft') prevLightbox();
-    });
-
-    try {
-      state.content = await API.getContent();
-    } catch (e) {
-      const main = document.getElementById('main');
-      if (main) main.innerHTML = `<div class="content-wrap"><div class="card" style="text-align: center; padding: 40px;"><p style="color: var(--danger);">❌ 加载失败：${e.message}</p></div></div>`;
-      return;
-    }
-    renderSidebar();
-    // 预加载材料（用于分类筛选）
-    await loadMaterials();
-
-    // 解析 hash
-    const hash = (location.hash || '').replace('#', '');
-    if (hash && state.content.sections.find(s => s.id === hash)) {
-      state.currentSection = hash;
-    }
-    renderMain();
-  }
-
-  return { init };
-})();
-
-// ==================== 全局兜底事件绑定 ====================
-// 无论 IIFE 内部是否出错，这里都保证按钮可点击
-(function bindGlobalEvents() {
-  function openSidebar() {
-    const s = document.getElementById('sidebar');
-    const b = document.getElementById('backdrop');
-    if (s) { s.classList.add('open'); s.style.transform = 'translateX(0)'; }
-    if (b) b.classList.add('show');
-  }
-  function closeSidebar() {
-    const s = document.getElementById('sidebar');
-    const b = document.getElementById('backdrop');
-    if (s) { s.classList.remove('open'); s.style.transform = ''; }
-    if (b) b.classList.remove('show');
-  }
-  // 用 onwindow 暴露给 inline onclick
-  window.__zx = { openSidebar, closeSidebar };
-
-  document.addEventListener('click', e => {
-    const t = e.target;
-    if (!t) return;
-    // 菜单按钮
-    if (t.closest && t.closest('#menuBtn')) { openSidebar(); e.preventDefault(); return; }
-    // 关闭按钮
-    if (t.closest && t.closest('#closeSidebar')) { closeSidebar(); e.preventDefault(); return; }
-    // 背景遮罩
-    if (t.id === 'backdrop') { closeSidebar(); return; }
-    // 侧边导航项
-    const navItem = t.closest && t.closest('.sidebar-nav-item');
-    if (navItem) {
-      e.preventDefault();
-      const section = navItem.dataset.section;
-      if (section) location.hash = section;
-      closeSidebar();
-      return;
-    }
-    // 安装提示关闭
-    if (t.id === 'installClose') {
-      const tip = document.getElementById('installTip');
-      if (tip) tip.hidden = true;
-      try { localStorage.setItem('pwa_install_dismissed', '1'); } catch {}
-      return;
-    }
-    // 安装按钮
-    if (t.id === 'installBtn') {
-      // 由 beforeinstallprompt 处理
-      return;
-    }
-  }, true);
-
-  // 案例子分类 tab 点击
-  document.addEventListener('click', e => {
-    const tab = e.target.closest && e.target.closest('.case-tab');
-    if (tab) {
-      e.preventDefault();
-      const sub = tab.dataset.sub;
-      if (sub && window.App && window.App.setCaseSub) {
-        window.App.setCaseSub(sub);
-      } else {
-        // 降级：手动切换 active class
-        document.querySelectorAll('.case-tab').forEach(t => t.classList.remove('active'));
-        tab.classList.add('active');
-      }
-    }
-  });
-
-  console.log('✅ 全局事件绑定完成');
-})();
-
-document.addEventListener('DOMContentLoaded', App.init);
