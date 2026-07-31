@@ -1,2 +1,1 @@
-﻿{"name":"AI专属人生档案","short_name":"人生档案","description":"私密、低内耗、可持续迭代的个人成长工作平台","start_url":"./","scope":"./","display":"standalone","background_color":"#f4f1e9","theme_color":"#173f3c","lang":"zh-CN","icons":[{"src":"./img/favicon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]}
-
+﻿{"name":"RIV · AI专属人生档案","short_name":"RIV人生档案","description":"Reach Infinite Victory · 达到无限胜利。私密、低内耗、可持续迭代的个人成长工作平台","start_url":"./","scope":"./","display":"standalone","orientation":"any","background_color":"#f4f1e9","theme_color":"#173f3c","lang":"zh-CN","icons":[{"src":"./img/icon-192.png","sizes":"192x192","type":"image/png","purpose":"any"},{"src":"./img/icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}]}
